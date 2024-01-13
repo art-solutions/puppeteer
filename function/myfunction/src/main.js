@@ -1,33 +1,37 @@
 import { Client } from 'node-appwrite';
+import axios from 'axios';
+
+// Regular expression to match email addresses
+const emailRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi;
 
 // This is your Appwrite function
 // It's executed each time we get a request
 export default async ({ req, res, log, error }) => {
-  // Why not try the Appwrite SDK?
-  //
-  // const client = new Client()
-  //    .setEndpoint('https://cloud.appwrite.io/v1')
-  //    .setProject(process.env.APPWRITE_FUNCTION_PROJECT_ID)
-  //    .setKey(process.env.APPWRITE_API_KEY);
-
-  // You can log messages to the console
-  log('Hello, Logs!');
-
-  // If something goes wrong, log an error
-  error('Hello, Errors!');
-
   // The `req` object contains the request data
-  if (req.method === 'GET') {
-    // Send a response with the res object helpers
-    // `res.send()` dispatches a string back to the client
-    return res.send('Hello, World!');
-  }
+  if (req.method === 'GET' && req.query.url) {
+    try {
+      // Fetch content from the URL
+      const response = await axios.get(req.query.url);
+      const data = response.data;
 
-  // `res.json()` is a handy helper for sending JSON
-  return res.json({
-    motto: 'Build like a team of hundreds_',
-    learn: 'https://appwrite.io/docs',
-    connect: 'https://appwrite.io/discord',
-    getInspired: 'https://builtwith.appwrite.io',
-  });
+      // Extract email addresses
+      const emails = data.match(emailRegex) || [];
+
+      // Send the extracted emails as a response
+      return res.json({
+        emails: emails
+      });
+    } catch (err) {
+      // Log the error and return a message
+      error(err.message);
+      return res.json({
+        error: 'Failed to fetch the URL or extract emails.'
+      });
+    }
+  } else {
+    // Return an error if the URL parameter is not provided
+    return res.json({
+      error: 'Please provide a URL as a query parameter.'
+    });
+  }
 };
